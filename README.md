@@ -99,4 +99,4 @@ that is worried
 Go to the [Project README](./ai-quote-engine/README.md)
 
 ## Note
-- I didn't work in the user engagement feature, I totally forgot, but I decided to add the Crisis Safety Feature
+- I didn't work in the user engagement feature, I totallgity forgot, but I decided to add the Crisis Safety Feature
