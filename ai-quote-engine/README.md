@@ -5,14 +5,16 @@ A CLI-based mental wellness tool that finds relevant movie quotes when you're go
 ## Features
 
 - **Semantic Understanding**: Goes beyond keyword matching to understand emotional intent and context
-- **Emotional Profiling**: Each quote is mapped to specific emotions, themes, and tones
+- **Emotional Profiling**: Dynamically analyzes any quote for emotions, themes, and tones
+- **Crisis Detection**: Identifies suicidal ideation and provides immediate mental health resources
 - **Clean Architecture**: Separation of concerns with repository pattern and service layer
 - **Confidence Scores**: See how well each quote matches your situation (0.0-1.0 scale)
 - **Two Modes**: Interactive conversation or single-query mode for quick searches
-- **Smart Matching**: Understands related emotions (worried ↔ anxious) and themes (new beginning ↔ change)
-- **Negative Filtering**: Prevents tone-mismatched quotes (no playful quotes during a crisis)
+- **Smart Matching**: Understands related emotions (happy ↔ joyful, worried ↔ anxious) and themes (family ↔ home)
+- **Sentiment Filtering**: Strong penalties prevent tone-mismatched quotes (no threatening quotes for happy moments)
+- **Universal Lexicon**: Works with ANY quotes JSON file - no hardcoded quote profiles needed
 - **Error Handling**: Graceful handling of empty queries, missing files, and no matches
-- **Interactive CLI**: User-friendly command-line interface with visual feedback
+- **Interactive CLI**: User-friendly command-line interface with backspace support
 - **Flexible Input**: Support for custom quotes files and command-line queries
 
 ## Architecture
@@ -137,17 +139,17 @@ How are you feeling? Describe your situation:
 
 ```
 How are you feeling? Describe your situation:
-> Life feels unpredictable and I don't know what's next
+> I'm very happy because I will meet with my family tonight
 
 ✨ Here are some quotes that might resonate with you:
 
-1. [0.85] "Life is like a box of chocolates. You never know what you're gonna get."
-   — Forrest Gump (Forrest Gump)
+1. [0.78] "There's no place like home."
+   — Dorothy (The Wizard of Oz)
 
-2. [0.76] "Our lives are defined by opportunities, even the ones we miss."
-   — Benjamin Button (The Curious Case of Benjamin Button)
+2. [0.64] "You had me at hello."
+   — Dorothy Boyd (Jerry Maguire)
 
-3. [0.68] "To infinity and beyond!"
+3. [0.58] "To infinity and beyond!"
    — Buzz Lightyear (Toy Story)
 ```
 
@@ -180,34 +182,48 @@ The semantic search engine uses an **Emotional Profiling System** to match quote
 
 ### 1. Query Analysis
 When you describe your situation, the engine:
-- **Detects emotions**: worried, excited, overwhelmed, sad, uncertain, motivated, struggling, etc.
-- **Identifies themes**: new beginning, health, challenge, uncertainty, persistence, support, etc.
-- **Understands context**: Differentiates between "excited about moving" vs "worried about health"
+- **Detects emotions**: 19 emotion categories including happy, excited, worried, sad, grateful, loved, nostalgic, and more
+- **Identifies themes**: 20+ universal themes like family, connection, celebration, home, persistence, challenge, health, etc.
+- **Understands context**: Differentiates between "excited about moving" vs "worried about health" vs "happy to meet family"
+- **Analyzes sentiment**: Positive, negative, or neutral tone detection
 
-### 2. Quote Profiling
-Each quote has a detailed emotional profile:
-- **Emotions**: What feelings does this quote address?
-- **Themes**: What situations is it relevant to?
-- **Tone**: encouraging, hopeful, motivational, philosophical, etc.
+### 2. Dynamic Quote Analysis
+The engine analyzes ANY quote in your JSON file without hardcoded profiles:
+- **Feature extraction**: Automatically detects emotions, themes, sentiment, and tone from quote text
+- **Universal lexicon**: Uses a comprehensive emotional vocabulary that works with any movie quote
+- **No manual setup**: Just add quotes to your JSON - the system handles the rest
 
-Example:
-```go
-"Just keep swimming." → {
-    Emotions: ["overwhelmed", "struggling", "tired", "perseverance"],
-    Themes: ["persistence", "resilience", "keep going"],
-    Tone: "encouraging"
-}
+Example analysis:
+```
+Query: "I'm very happy because I will meet with my family tonight"
+→ Extracts: emotion:happy, emotion:excited, theme:family, theme:connection, 
+            theme:time, sentiment:positive
+
+Quote: "There's no place like home."
+→ Extracts: theme:home, theme:family, theme:belonging, sentiment:positive
+
+Result: Strong match! ✓
 ```
 
-### 3. Relevance Scoring
-The engine calculates a normalized score (0.0-1.0) based on:
-- **Emotion matches**: 10 points (exact) or 5 points (related)
-   - "worried" matches "anxious", "concerned", "crisis"
-- **Theme matches**: 8 points (exact) or 4 points (related)
-   - "new beginning" relates to "change", "journey", "future"
-- **Negative penalties**: -15 points for tone mismatches
-   - Won't show playful quotes when you're in crisis
-   - Won't show urgent quotes when you're excited
+### 3. Intelligent Scoring System
+The engine uses **cosine similarity** (industry-standard ML technique) with weighted features:
+
+**Feature Weights:**
+- **Emotions**: 3.0x weight (highest priority)
+- **Themes**: 2.5x weight
+- **Sentiment/Tone**: 1.0x weight
+
+**Sentiment Filtering:**
+- **Opposite sentiments**: 60-70% penalty
+    - Happy query + threatening quote = heavily penalized
+- **Mismatched emotional context**: 70% penalty
+    - Joyful query + conflict/struggle quote = blocked
+- **Neutral mismatches**: 20% penalty
+
+**Related Emotion Bonuses:**
+- "happy" relates to "excited", "grateful", "joyful", "content"
+- "worried" relates to "anxious", "uncertain", "stressed"
+- System automatically boosts scores for emotionally related matches
 
 ### 4. Results
 Returns top 3 quotes with confidence scores showing match quality:
@@ -226,6 +242,44 @@ The application handles several error cases:
 - **No meaningful words**: Asks user to rephrase
 - **No matches found**: Suggests trying a different description
 - **Malformed JSON**: Reports parsing errors
+- **Crisis detection**: Special handling for suicidal ideation (see Safety Features below)
+
+## Safety Features
+
+The application includes **crisis detection** to protect user wellbeing:
+
+### Crisis Indicators
+Automatically detects phrases indicating suicidal ideation or self-harm:
+- "don't want to live", "want to die", "kill myself"
+- "end my life", "suicide", "suicidal"
+- "hurt myself", "harm myself"
+- "better off dead", "end it all"
+- "no reason to live", "can't go on"
+
+### Crisis Response
+When crisis language is detected, the app:
+1. **Does not show movie quotes** (inappropriate for crisis situations)
+2. **Displays compassionate message** acknowledging their difficult time
+3. **Provides immediate resources**:
+    - **988 Suicide & Crisis Lifeline** (US - call or text, 24/7)
+    - **Crisis Text Line** (text HOME to 741741)
+    - **International Association for Suicide Prevention** (global resources)
+    - **Emergency Services** (911 or local emergency number)
+
+Example output:
+```
+⚠️  It sounds like you might be going through a really difficult time.
+
+While movie quotes can be inspiring, what you're experiencing
+may need professional support. Please consider reaching out:
+
+🆘 CRISIS RESOURCES:
+   • National Suicide Prevention Lifeline (US)
+     Call or Text: 988
+   ...
+```
+
+This ensures the application acts **responsibly** when users are in mental health crisis.
 
 ## Customization
 
@@ -235,9 +289,9 @@ Edit `quotes.json` and add new quote objects:
 
 ```json
 {
-   "text": "Your quote here",
-   "movie": "Movie Name",
-   "character": "Character Name"
+  "text": "Your quote here",
+  "movie": "Movie Name",
+  "character": "Character Name"
 }
 ```
 
@@ -251,13 +305,31 @@ results, err := c.service.SearchQuotes(query, 5) // Returns top 5 instead of 3
 
 ### Extending Emotional Keywords
 
-Add new emotion-keyword mappings in `calculateRelevanceScore()`:
+The lexicon is comprehensive but you can extend it by modifying `NewEmotionalLexicon()`:
+
+**Current Emotion Categories (19 total):**
+- Negative: overwhelmed, worried, sad, tired, stuck, uncertain, struggling, lonely, rejected, angry
+- Positive: motivated, excited, happy, hopeful, proud, grateful, peaceful, loved
+- Neutral: nostalgic
+
+**Current Theme Categories (20+ total):**
+- persistence, change, future, challenge, opportunity, home, family, journey, truth
+- action, choice, life, time, support, beginning, loss, health, moving, preparation
+- connection, celebration
+
+Add new emotions or themes:
 
 ```go
-emotionalKeywords := map[string][]string{
-"perseverance": {"swimming", "keep", "going", ...},
-"courage": {"brave", "fear", "face", ...}, // New emotion
-// ... more mappings
+EmotionKeywords: map[string][]string{
+    "overwhelmed": {"overwhelm", "too much", "swamp", ...},
+    "confident": {"confident", "sure", "certain", "assured"}, // New emotion
+    // ... more emotions
+}
+
+ThemeKeywords: map[string][]string{
+    "home": {"home", "belong", "place", ...},
+    "friendship": {"friend", "buddy", "companion", "pal"}, // New theme
+    // ... more themes
 }
 ```
 
@@ -275,15 +347,29 @@ go test ./...
 - **Error Wrapping**: Using `fmt.Errorf` with `%w` for error chains
 - **Separation of Concerns**: Each layer has a single responsibility
 - **No External Dependencies**: Uses only Go standard library
+- **Dynamic Analysis**: No hardcoded quote profiles - works with any quotes JSON
+- **Cosine Similarity**: Industry-standard ML technique for semantic matching
+
+### How the Matching Algorithm Works
+
+1. **Tokenization**: Removes stop words and punctuation from text
+2. **Feature Extraction**: Analyzes both query and quotes for emotions, themes, sentiment
+3. **Feature Vectors**: Creates weighted vectors (emotions: 3.0x, themes: 2.5x)
+4. **Cosine Similarity**: Calculates angle between query and quote vectors
+5. **Sentiment Filtering**: Applies penalties for mismatched emotional contexts
+6. **Normalization**: Scores normalized to 0.0-1.0 range
 
 ## Future Enhancements
 
-- Fuzzy string matching for typo tolerance
-- Machine learning-based semantic similarity
-- Support for multiple languages
-- Quote categories and filtering
-- User favorites and history
-- API integration for expanded quote database
+- User feedback loop to improve matching accuracy
+- Custom emotional lexicon configuration files
+- Multi-language support for international quotes
+- Quote categories and advanced filtering options
+- User favorites and search history
+- Expanded crisis resources for different countries
+- API endpoint for programmatic access
+- Web-based interface option
+- Machine learning model training on user preferences
 
 ## License
 

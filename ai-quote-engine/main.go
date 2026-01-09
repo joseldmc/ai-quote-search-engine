@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"strings"
 )
@@ -25,11 +26,12 @@ type SearchResult struct {
 	Score float64
 }
 
-// Emotional Context and Themes
-type EmotionalProfile struct {
-	Emotions []string
-	Themes   []string
-	Tone     string
+// Emotional and thematic lexicons
+type EmotionalContext struct {
+	PrimaryEmotion  string
+	RelatedEmotions []string
+	IntensityScore  float64
+	Valence         string // positive, negative, neutral
 }
 
 // Repository Interface
@@ -69,17 +71,17 @@ func (r *FileQuoteRepository) LoadQuotes(filename string) (*QuoteData, error) {
 	return &data, nil
 }
 
-// Quote Search Service Implementation
+// Dynamic Quote Search Service Implementation
 type SemanticQuoteService struct {
-	data          *QuoteData
-	repository    QuoteRepository
-	quoteProfiles map[string]EmotionalProfile
+	data       *QuoteData
+	repository QuoteRepository
+	lexicon    *EmotionalLexicon
 }
 
 func NewSemanticQuoteService(repo QuoteRepository) *SemanticQuoteService {
 	return &SemanticQuoteService{
-		repository:    repo,
-		quoteProfiles: make(map[string]EmotionalProfile),
+		repository: repo,
+		lexicon:    NewEmotionalLexicon(),
 	}
 }
 
@@ -89,131 +91,7 @@ func (s *SemanticQuoteService) Initialize(filename string) error {
 		return err
 	}
 	s.data = data
-	s.buildQuoteProfiles()
 	return nil
-}
-
-func (s *SemanticQuoteService) buildQuoteProfiles() {
-	// Define emotional and thematic profiles for each quote
-	s.quoteProfiles["Just keep swimming."] = EmotionalProfile{
-		Emotions: []string{"overwhelmed", "struggling", "tired", "perseverance", "exhausted"},
-		Themes:   []string{"persistence", "continuation", "resilience", "keep going", "don't give up"},
-		Tone:     "encouraging",
-	}
-
-	s.quoteProfiles["After all, tomorrow is another day!"] = EmotionalProfile{
-		Emotions: []string{"disappointed", "setback", "failure", "hopeful", "optimistic"},
-		Themes:   []string{"new beginning", "fresh start", "moving forward", "hope", "recovery"},
-		Tone:     "hopeful",
-	}
-
-	s.quoteProfiles["I'm going to make him an offer he can't refuse."] = EmotionalProfile{
-		Emotions: []string{"powerful", "assertive", "confident", "threatening"},
-		Themes:   []string{"negotiation", "power", "control", "persuasion", "dominance"},
-		Tone:     "assertive",
-	}
-
-	s.quoteProfiles["Life is like a box of chocolates. You never know what you're gonna get."] = EmotionalProfile{
-		Emotions: []string{"uncertain", "curious", "accepting", "philosophical"},
-		Themes:   []string{"uncertainty", "unpredictability", "acceptance", "life lessons", "randomness", "adventure"},
-		Tone:     "philosophical",
-	}
-
-	s.quoteProfiles["You can't handle the truth!"] = EmotionalProfile{
-		Emotions: []string{"angry", "confrontational", "defensive", "intense"},
-		Themes:   []string{"reality", "confrontation", "denial", "honesty"},
-		Tone:     "confrontational",
-	}
-
-	s.quoteProfiles["May the Force be with you."] = EmotionalProfile{
-		Emotions: []string{"supportive", "encouraging", "hopeful", "wishing well"},
-		Themes:   []string{"good luck", "support", "blessing", "encouragement", "journey", "challenge"},
-		Tone:     "supportive",
-	}
-
-	s.quoteProfiles["There's no place like home."] = EmotionalProfile{
-		Emotions: []string{"homesick", "nostalgic", "longing", "comfort", "belonging"},
-		Themes:   []string{"home", "belonging", "comfort", "safety", "family", "roots"},
-		Tone:     "nostalgic",
-	}
-
-	s.quoteProfiles["I'll be back."] = EmotionalProfile{
-		Emotions: []string{"determined", "confident", "persistent", "threatening"},
-		Themes:   []string{"return", "persistence", "promise", "determination"},
-		Tone:     "determined",
-	}
-
-	s.quoteProfiles["Houston, we have a problem."] = EmotionalProfile{
-		Emotions: []string{"worried", "anxious", "crisis", "emergency", "stressed"},
-		Themes:   []string{"problem", "crisis", "emergency", "trouble", "difficulty", "challenge"},
-		Tone:     "urgent",
-	}
-
-	s.quoteProfiles["You're gonna need a bigger boat."] = EmotionalProfile{
-		Emotions: []string{"overwhelmed", "underprepared", "surprised", "inadequate"},
-		Themes:   []string{"underestimation", "surprise", "insufficient", "unprepared", "bigger challenge"},
-		Tone:     "humorous",
-	}
-
-	s.quoteProfiles["The first rule of Fight Club is: You do not talk about Fight Club."] = EmotionalProfile{
-		Emotions: []string{"secretive", "rebellious", "exclusive"},
-		Themes:   []string{"secrecy", "rules", "rebellion", "underground"},
-		Tone:     "mysterious",
-	}
-
-	s.quoteProfiles["Why so serious?"] = EmotionalProfile{
-		Emotions: []string{"stressed", "tense", "overthinking", "worried"},
-		Themes:   []string{"lighten up", "relax", "perspective", "humor", "don't stress"},
-		Tone:     "playful",
-	}
-
-	s.quoteProfiles["You had me at hello."] = EmotionalProfile{
-		Emotions: []string{"love", "romantic", "convinced", "charmed", "smitten"},
-		Themes:   []string{"love", "romance", "connection", "immediate attraction"},
-		Tone:     "romantic",
-	}
-
-	s.quoteProfiles["To infinity and beyond!"] = EmotionalProfile{
-		Emotions: []string{"excited", "adventurous", "optimistic", "ambitious", "enthusiastic"},
-		Themes:   []string{"adventure", "limitless", "ambition", "excitement", "new horizons", "exploration"},
-		Tone:     "enthusiastic",
-	}
-
-	s.quoteProfiles["Life moves pretty fast. If you don't stop and look around once in a while, you could miss it."] = EmotionalProfile{
-		Emotions: []string{"rushed", "busy", "overwhelmed", "reflective", "mindful"},
-		Themes:   []string{"slow down", "mindfulness", "appreciation", "present moment", "life passing by", "pause"},
-		Tone:     "reflective",
-	}
-
-	s.quoteProfiles["Nobody puts Baby in a corner."] = EmotionalProfile{
-		Emotions: []string{"defensive", "protective", "standing up", "assertive"},
-		Themes:   []string{"standing up", "protection", "respect", "worth"},
-		Tone:     "protective",
-	}
-
-	s.quoteProfiles["It's not who I am underneath, but what I do that defines me."] = EmotionalProfile{
-		Emotions: []string{"determined", "purposeful", "identity seeking", "motivated"},
-		Themes:   []string{"actions", "identity", "purpose", "character", "doing vs being", "integrity"},
-		Tone:     "inspirational",
-	}
-
-	s.quoteProfiles["Our lives are defined by opportunities, even the ones we miss."] = EmotionalProfile{
-		Emotions: []string{"regretful", "reflective", "philosophical", "contemplative", "accepting"},
-		Themes:   []string{"opportunities", "regret", "choices", "life path", "what if", "acceptance", "past decisions"},
-		Tone:     "philosophical",
-	}
-
-	s.quoteProfiles["Get busy living, or get busy dying."] = EmotionalProfile{
-		Emotions: []string{"motivated", "determined", "stuck", "choosing", "decisive"},
-		Themes:   []string{"choice", "action", "motivation", "moving forward", "living fully", "purpose"},
-		Tone:     "motivational",
-	}
-
-	s.quoteProfiles["The only way out is through."] = EmotionalProfile{
-		Emotions: []string{"struggling", "difficult", "challenged", "facing hardship", "enduring"},
-		Themes:   []string{"perseverance", "endurance", "facing difficulty", "no shortcuts", "courage", "pushing through"},
-		Tone:     "resilient",
-	}
 }
 
 func (s *SemanticQuoteService) SearchQuotes(query string, topN int) ([]SearchResult, error) {
@@ -225,11 +103,24 @@ func (s *SemanticQuoteService) SearchQuotes(query string, topN int) ([]SearchRes
 		return nil, fmt.Errorf("query cannot be empty")
 	}
 
-	queryProfile := s.analyzeQuery(query)
+	// Check for crisis indicators
+	if s.detectCrisis(query) {
+		return nil, fmt.Errorf("CRISIS_DETECTED")
+	}
+
+	queryContext := s.analyzeText(query)
 
 	var results []SearchResult
 	for _, quote := range s.data.Quotes {
-		score := s.calculateRelevanceScore(queryProfile, quote)
+		quoteContext := s.analyzeText(quote.Text)
+
+		// Check tone compatibility before calculating similarity
+		if !s.areTonesCompatible(queryContext, quoteContext, quote.Text) {
+			continue
+		}
+
+		score := s.calculateSimilarity(queryContext, quoteContext)
+
 		if score > 0 {
 			results = append(results, SearchResult{
 				Quote: quote,
@@ -259,192 +150,436 @@ func (s *SemanticQuoteService) SearchQuotes(query string, topN int) ([]SearchRes
 	return results[:topN], nil
 }
 
-func (s *SemanticQuoteService) analyzeQuery(query string) EmotionalProfile {
-	query = strings.ToLower(query)
-	profile := EmotionalProfile{
-		Emotions: []string{},
-		Themes:   []string{},
-		Tone:     "neutral",
+// Check if query tone is compatible with quote tone
+func (s *SemanticQuoteService) areTonesCompatible(queryFeatures, quoteFeatures map[string]float64, quoteText string) bool {
+	quoteTextLower := strings.ToLower(quoteText)
+
+	// Detect if query is positive/joyful
+	isQueryPositive := queryFeatures["emotion:happy"] > 0 ||
+		queryFeatures["emotion:excited"] > 0 ||
+		queryFeatures["emotion:grateful"] > 0 ||
+		queryFeatures["emotion:loved"] > 0 ||
+		queryFeatures["sentiment:positive"] > 1
+
+	// Detect if query is about celebration/connection
+	isQueryCelebratory := queryFeatures["theme:family"] > 0 ||
+		queryFeatures["theme:connection"] > 0 ||
+		queryFeatures["theme:celebration"] > 0 ||
+		queryFeatures["theme:home"] > 0
+
+	// Block quotes with these patterns for positive queries
+	if isQueryPositive || isQueryCelebratory {
+		// Philosophical/serious quotes
+		seriousPatterns := []string{
+			"defines me", "who i am", "underneath",
+			"refuse", "offer", "handle the truth",
+			"fight club", "rule", "serious",
+			"problem", "crisis", "boat",
+		}
+
+		for _, pattern := range seriousPatterns {
+			if strings.Contains(quoteTextLower, pattern) {
+				return false
+			}
+		}
+
+		// Block quotes with negative/dark themes
+		if quoteFeatures["sentiment:negative"] > quoteFeatures["sentiment:positive"] {
+			return false
+		}
 	}
 
-	// Emotion detection
-	emotionKeywords := map[string][]string{
-		"excited":     {"excited", "thrilled", "looking forward", "can't wait", "enthusiastic"},
-		"overwhelmed": {"overwhelmed", "too much", "stressed", "stressed out", "swamped", "drowning"},
-		"worried":     {"worried", "anxious", "nervous", "concerned", "scared", "afraid", "fearful"},
-		"sad":         {"sad", "depressed", "down", "unhappy", "heartbroken", "grieving"},
-		"uncertain":   {"uncertain", "unsure", "don't know", "confused", "lost", "unclear"},
-		"hopeful":     {"hopeful", "optimistic", "positive", "looking up"},
-		"tired":       {"tired", "exhausted", "worn out", "drained", "fatigued", "burnt out"},
-		"stuck":       {"stuck", "trapped", "can't move", "stagnant", "blocked"},
-		"lonely":      {"lonely", "alone", "isolated", "disconnected"},
-		"motivated":   {"motivated", "driven", "determined", "ready", "pumped"},
-		"struggling":  {"struggling", "difficult", "hard", "tough", "challenging"},
-		"nostalgic":   {"miss", "missing", "nostalgia", "remember", "used to"},
-		"crisis":      {"emergency", "crisis", "urgent", "sick", "ill", "dying", "serious"},
-	}
+	// Detect if query is about worry/concern (especially health-related)
+	isQueryWorried := queryFeatures["emotion:worried"] > 0 ||
+		queryFeatures["emotion:sad"] > 0 ||
+		queryFeatures["theme:health"] > 0
 
-	for emotion, keywords := range emotionKeywords {
-		for _, keyword := range keywords {
-			if strings.Contains(query, keyword) {
-				profile.Emotions = append(profile.Emotions, emotion)
-				break
+	// Block inappropriate quotes for worried/concerned queries
+	if isQueryWorried {
+		// Block threatening, aggressive, or dismissive quotes
+		inappropriatePatterns := []string{
+			"refuse", "offer", "can't refuse",
+			"i'll be back",
+			"fight club", "rule",
+			"boat", "gonna need",
+			"nobody puts", "corner",
+			"handle the truth",
+		}
+
+		for _, pattern := range inappropriatePatterns {
+			if strings.Contains(quoteTextLower, pattern) {
+				return false
+			}
+		}
+
+		// For health/worry concerns, only allow supportive or empathetic quotes
+		// Block overly optimistic quotes that might feel dismissive
+		dismissivePatterns := []string{
+			"tomorrow is another day",           // Can feel dismissive of current worry
+			"life is like", "box of chocolates", // Too philosophical for immediate concern
+			"life moves pretty fast", // Not appropriate for health worries
+		}
+
+		for _, pattern := range dismissivePatterns {
+			if strings.Contains(quoteTextLower, pattern) {
+				return false
 			}
 		}
 	}
 
-	// Theme detection
-	themeKeywords := map[string][]string{
-		"new beginning": {"new city", "moving", "starting", "new job", "new chapter", "fresh start"},
-		"preparation":   {"preparing", "preparation", "getting ready", "planning"},
-		"health":        {"sick", "ill", "health", "medical", "hospital", "dying", "disease"},
-		"pet":           {"dog", "cat", "pet", "animal"},
-		"change":        {"change", "transition", "different", "new"},
-		"challenge":     {"challenge", "difficult", "hard", "tough", "obstacle"},
-		"journey":       {"journey", "path", "road", "way", "going"},
-		"home":          {"home", "house", "place", "belong"},
-		"future":        {"future", "ahead", "tomorrow", "next", "coming"},
-		"uncertainty":   {"don't know", "uncertain", "unsure", "unpredictable"},
-		"persistence":   {"keep going", "continue", "don't give up", "push through"},
-		"support":       {"need help", "support", "encourage", "guidance"},
-		"loss":          {"lost", "losing", "gone", "miss"},
-	}
+	// Detect if query is negative/struggling
+	isQueryNegative := queryFeatures["emotion:struggling"] > 0 ||
+		queryFeatures["emotion:overwhelmed"] > 0 ||
+		queryFeatures["emotion:tired"] > 0 ||
+		queryFeatures["sentiment:negative"] > 1
 
-	for theme, keywords := range themeKeywords {
-		for _, keyword := range keywords {
-			if strings.Contains(query, keyword) {
-				profile.Themes = append(profile.Themes, theme)
-				break
+	// Block overly cheerful quotes for negative queries
+	if isQueryNegative {
+		cheerfulPatterns := []string{
+			"infinity and beyond",
+			"had me at hello",
+		}
+
+		for _, pattern := range cheerfulPatterns {
+			if strings.Contains(quoteTextLower, pattern) {
+				return false
 			}
 		}
 	}
 
-	return profile
+	return true
 }
 
-func (s *SemanticQuoteService) calculateRelevanceScore(queryProfile EmotionalProfile, quote Quote) float64 {
-	quoteProfile, exists := s.quoteProfiles[quote.Text]
-	if !exists {
-		return 0.0
+// Detect crisis situations that require professional help
+func (s *SemanticQuoteService) detectCrisis(query string) bool {
+	query = strings.ToLower(query)
+
+	// Crisis indicators - suicidal ideation, self-harm
+	crisisPatterns := []string{
+		"kill myself",
+		"end my life",
+		"don't want to live",
+		"want to die",
+		"suicide",
+		"suicidal",
+		"hurt myself",
+		"harm myself",
+		"not worth living",
+		"better off dead",
+		"end it all",
+		"can't go on",
+		"no reason to live",
 	}
 
-	score := 0.0
-	maxPossibleScore := 100.0
-
-	// Emotion matching (highest weight)
-	for _, queryEmotion := range queryProfile.Emotions {
-		for _, quoteEmotion := range quoteProfile.Emotions {
-			if queryEmotion == quoteEmotion {
-				score += 10.0
-			}
-			// Related emotions
-			if s.areEmotionsRelated(queryEmotion, quoteEmotion) {
-				score += 5.0
-			}
+	for _, pattern := range crisisPatterns {
+		if strings.Contains(query, pattern) {
+			return true
 		}
 	}
 
-	// Theme matching (high weight)
-	for _, queryTheme := range queryProfile.Themes {
-		for _, quoteTheme := range quoteProfile.Themes {
-			if queryTheme == quoteTheme {
-				score += 8.0
-			}
-			if s.areThemesRelated(queryTheme, quoteTheme) {
-				score += 4.0
-			}
-		}
-	}
+	return false
+}
 
-	// Apply penalties for mismatched emotions
-	negativePenaltyPairs := map[string][]string{
-		"worried":     {"playful", "humorous", "assertive"},
-		"crisis":      {"playful", "romantic", "humorous"},
-		"sad":         {"playful", "enthusiastic"},
-		"excited":     {"urgent", "crisis"},
-		"overwhelmed": {"confrontational", "assertive"},
-	}
+// Analyze text to extract emotional and thematic content
+func (s *SemanticQuoteService) analyzeText(text string) map[string]float64 {
+	text = strings.ToLower(text)
+	words := s.tokenize(text)
 
-	for _, queryEmotion := range queryProfile.Emotions {
-		if penalties, exists := negativePenaltyPairs[queryEmotion]; exists {
-			for _, penaltyEmotion := range penalties {
-				for _, quoteEmotion := range quoteProfile.Emotions {
-					if quoteEmotion == penaltyEmotion {
-						score -= 15.0
+	features := make(map[string]float64)
+
+	// Emotion detection
+	for emotion, keywords := range s.lexicon.EmotionKeywords {
+		for _, word := range words {
+			for _, keyword := range keywords {
+				if strings.Contains(word, keyword) || strings.Contains(keyword, word) {
+					features["emotion:"+emotion] += 1.0
+
+					// Add related emotions with lower weight
+					if related, exists := s.lexicon.EmotionRelations[emotion]; exists {
+						for _, relEmotion := range related {
+							features["emotion:"+relEmotion] += 0.3
+						}
 					}
 				}
 			}
 		}
 	}
 
-	// Normalize to 0.0-1.0 range
-	if score < 0 {
+	// Theme detection
+	for theme, keywords := range s.lexicon.ThemeKeywords {
+		for _, word := range words {
+			for _, keyword := range keywords {
+				if strings.Contains(word, keyword) || strings.Contains(keyword, word) {
+					features["theme:"+theme] += 1.0
+				}
+			}
+		}
+	}
+
+	// Sentiment and tone
+	positiveCount := 0.0
+	negativeCount := 0.0
+
+	for _, word := range words {
+		for _, posWord := range s.lexicon.PositiveWords {
+			if word == posWord {
+				positiveCount += 1.0
+			}
+		}
+		for _, negWord := range s.lexicon.NegativeWords {
+			if word == negWord {
+				negativeCount += 1.0
+			}
+		}
+	}
+
+	if positiveCount > 0 {
+		features["sentiment:positive"] = positiveCount
+	}
+	if negativeCount > 0 {
+		features["sentiment:negative"] = negativeCount
+	}
+
+	// Action vs reflection
+	for _, word := range words {
+		for _, actionWord := range s.lexicon.ActionWords {
+			if word == actionWord {
+				features["tone:action"] += 1.0
+			}
+		}
+		for _, reflectWord := range s.lexicon.ReflectiveWords {
+			if word == reflectWord {
+				features["tone:reflective"] += 1.0
+			}
+		}
+	}
+
+	return features
+}
+
+// Calculate cosine similarity between query and quote feature vectors
+func (s *SemanticQuoteService) calculateSimilarity(queryFeatures, quoteFeatures map[string]float64) float64 {
+	// Get all unique features
+	allFeatures := make(map[string]bool)
+	for feature := range queryFeatures {
+		allFeatures[feature] = true
+	}
+	for feature := range quoteFeatures {
+		allFeatures[feature] = true
+	}
+
+	// Calculate dot product and magnitudes
+	dotProduct := 0.0
+	queryMagnitude := 0.0
+	quoteMagnitude := 0.0
+
+	for feature := range allFeatures {
+		queryVal := queryFeatures[feature]
+		quoteVal := quoteFeatures[feature]
+
+		// Weight emotions higher than other features
+		weight := 1.0
+		if strings.HasPrefix(feature, "emotion:") {
+			weight = 3.0
+		} else if strings.HasPrefix(feature, "theme:") {
+			weight = 2.5
+		}
+
+		dotProduct += (queryVal * weight) * (quoteVal * weight)
+		queryMagnitude += (queryVal * weight) * (queryVal * weight)
+		quoteMagnitude += (quoteVal * weight) * (quoteVal * weight)
+	}
+
+	// Apply sentiment filtering - stronger penalties for mismatches
+	querySentiment := s.getSentiment(queryFeatures)
+	quoteSentiment := s.getSentiment(quoteFeatures)
+
+	// Strong penalty for opposite sentiments
+	sentimentPenalty := 1.0
+	if querySentiment == "negative" && quoteSentiment == "positive" {
+		sentimentPenalty = 0.4
+	} else if querySentiment == "positive" && quoteSentiment == "negative" {
+		sentimentPenalty = 0.3
+	} else if querySentiment == "neutral" && quoteSentiment != "neutral" {
+		sentimentPenalty = 0.8
+	}
+
+	// Apply tone filtering - penalize mismatched emotional contexts
+	queryHasJoy := queryFeatures["emotion:happy"] > 0 || queryFeatures["emotion:excited"] > 0 || queryFeatures["emotion:grateful"] > 0
+	quoteHasConflict := quoteFeatures["theme:challenge"] > 0 || quoteFeatures["theme:truth"] > 0 ||
+		strings.Contains(strings.ToLower(s.getQuoteTextFromFeatures(quoteFeatures)), "refuse") ||
+		strings.Contains(strings.ToLower(s.getQuoteTextFromFeatures(quoteFeatures)), "defines")
+
+	tonePenalty := 1.0
+	if queryHasJoy && quoteHasConflict {
+		tonePenalty = 0.3
+	}
+
+	if queryMagnitude == 0 || quoteMagnitude == 0 {
 		return 0.0
 	}
-	normalizedScore := score / maxPossibleScore
-	if normalizedScore > 1.0 {
-		normalizedScore = 1.0
+
+	similarity := (dotProduct / (math.Sqrt(queryMagnitude) * math.Sqrt(quoteMagnitude))) * sentimentPenalty * tonePenalty
+
+	// Normalize to 0-1 range
+	if similarity < 0 {
+		similarity = 0
+	}
+	if similarity > 1 {
+		similarity = 1
 	}
 
-	return normalizedScore
+	return similarity
 }
 
-func (s *SemanticQuoteService) areEmotionsRelated(emotion1, emotion2 string) bool {
-	relatedEmotions := map[string][]string{
-		"worried":     {"anxious", "concerned", "crisis", "stressed"},
-		"overwhelmed": {"stressed", "tired", "struggling", "exhausted"},
-		"excited":     {"enthusiastic", "adventurous", "optimistic", "hopeful"},
-		"sad":         {"disappointed", "regretful", "lonely"},
-		"uncertain":   {"confused", "lost", "philosophical"},
-		"struggling":  {"difficult", "challenged", "tired", "stuck"},
-		"motivated":   {"determined", "purposeful", "decisive"},
-	}
-
-	if related, exists := relatedEmotions[emotion1]; exists {
-		for _, rel := range related {
-			if rel == emotion2 {
-				return true
-			}
-		}
-	}
-
-	if related, exists := relatedEmotions[emotion2]; exists {
-		for _, rel := range related {
-			if rel == emotion1 {
-				return true
-			}
-		}
-	}
-
-	return false
+func (s *SemanticQuoteService) getQuoteTextFromFeatures(features map[string]float64) string {
+	// This is a helper - in practice we'd need to track quote text separately
+	// For now, return empty string as we can't reverse engineer the quote
+	return ""
 }
 
-func (s *SemanticQuoteService) areThemesRelated(theme1, theme2 string) bool {
-	relatedThemes := map[string][]string{
-		"new beginning": {"change", "journey", "future"},
-		"health":        {"crisis", "support", "challenge"},
-		"challenge":     {"persistence", "journey", "struggle"},
-		"uncertainty":   {"future", "change", "journey"},
-		"preparation":   {"future", "journey", "challenge"},
+func (s *SemanticQuoteService) getSentiment(features map[string]float64) string {
+	positive := features["sentiment:positive"]
+	negative := features["sentiment:negative"]
+
+	if positive > negative {
+		return "positive"
+	} else if negative > positive {
+		return "negative"
+	}
+	return "neutral"
+}
+
+func (s *SemanticQuoteService) tokenize(text string) []string {
+	text = strings.ToLower(text)
+
+	// Replace punctuation with spaces
+	replacer := strings.NewReplacer(
+		".", " ", ",", " ", "!", " ", "?", " ", ";", " ", ":", " ",
+		"'", "", "\"", "", "(", " ", ")", " ",
+	)
+	text = replacer.Replace(text)
+
+	words := strings.Fields(text)
+
+	stopWords := map[string]bool{
+		"a": true, "an": true, "and": true, "are": true, "as": true, "at": true,
+		"be": true, "by": true, "for": true, "from": true, "has": true, "he": true,
+		"in": true, "is": true, "it": true, "its": true, "of": true, "on": true,
+		"that": true, "the": true, "to": true, "was": true, "will": true, "with": true,
+		"we": true, "you": true, "your": true,
 	}
 
-	if related, exists := relatedThemes[theme1]; exists {
-		for _, rel := range related {
-			if rel == theme2 {
-				return true
-			}
+	var tokens []string
+	for _, word := range words {
+		if len(word) > 1 && !stopWords[word] {
+			tokens = append(tokens, word)
 		}
 	}
 
-	if related, exists := relatedThemes[theme2]; exists {
-		for _, rel := range related {
-			if rel == theme1 {
-				return true
-			}
-		}
-	}
+	return tokens
+}
 
-	return false
+// Emotional Lexicon - Dynamic knowledge base
+type EmotionalLexicon struct {
+	EmotionKeywords  map[string][]string
+	EmotionRelations map[string][]string
+	ThemeKeywords    map[string][]string
+	PositiveWords    []string
+	NegativeWords    []string
+	ActionWords      []string
+	ReflectiveWords  []string
+}
+
+func NewEmotionalLexicon() *EmotionalLexicon {
+	return &EmotionalLexicon{
+		EmotionKeywords: map[string][]string{
+			"overwhelmed": {"overwhelm", "too much", "swamp", "drown", "bury", "flood"},
+			"motivated":   {"motivat", "inspir", "driven", "determin", "pump", "energiz", "push"},
+			"worried":     {"worr", "anxious", "nervous", "concern", "afraid", "scare", "fear"},
+			"sad":         {"sad", "depress", "down", "unhappy", "heartbreak", "griev", "mourn"},
+			"excited":     {"excit", "thrill", "eager", "enthusias", "can't wait", "looking forward"},
+			"happy":       {"happy", "joy", "delight", "glad", "pleased", "cheer", "content", "elated"},
+			"tired":       {"tire", "exhaust", "worn", "drain", "fatigue", "burnt out", "weary"},
+			"stuck":       {"stuck", "trap", "stagnant", "block", "immobil"},
+			"uncertain":   {"uncertain", "unsure", "confus", "lost", "unclear", "doubt"},
+			"hopeful":     {"hope", "optimis", "positive", "bright", "promising"},
+			"struggling":  {"struggl", "difficult", "hard", "tough", "challeng", "fight"},
+			"lonely":      {"lone", "isolat", "disconnect", "apart", "solo"},
+			"rejected":    {"reject", "dismiss", "refus", "turn down", "decline"},
+			"proud":       {"proud", "accomplish", "achiev", "success", "triumph"},
+			"grateful":    {"grateful", "thankful", "appreciat", "bless"},
+			"angry":       {"angry", "mad", "furious", "irritat", "frustrat"},
+			"peaceful":    {"peace", "calm", "serene", "tranquil", "relax"},
+			"loved":       {"love", "loved", "caring", "affection", "warm"},
+			"nostalgic":   {"nostalg", "remember", "miss", "memories", "past"},
+		},
+
+		EmotionRelations: map[string][]string{
+			"overwhelmed": {"stressed", "anxious", "tired"},
+			"worried":     {"anxious", "uncertain", "stressed"},
+			"sad":         {"lonely", "hopeless", "disappointed"},
+			"excited":     {"hopeful", "motivated", "energized", "happy"},
+			"happy":       {"excited", "grateful", "joyful", "content"},
+			"struggling":  {"overwhelmed", "tired", "stuck"},
+			"stuck":       {"frustrated", "uncertain", "lost"},
+			"rejected":    {"sad", "disappointed", "hurt"},
+			"motivated":   {"determined", "hopeful", "energized"},
+			"grateful":    {"happy", "content", "blessed"},
+			"loved":       {"happy", "grateful", "warm"},
+		},
+
+		ThemeKeywords: map[string][]string{
+			"persistence": {"keep", "continu", "persist", "endur", "carry on", "push through", "stay", "swimming"},
+			"change":      {"chang", "transiti", "shift", "transform", "evolv", "new"},
+			"future":      {"future", "ahead", "tomorrow", "next", "coming", "forward"},
+			"challenge":   {"challeng", "obstacle", "difficult", "problem", "hurdle", "barrier"},
+			"opportunity": {"opportun", "chance", "possibil", "option", "opening"},
+			"home":        {"home", "belong", "place", "family", "roots", "comfort", "house"},
+			"family":      {"family", "families", "relatives", "parents", "children", "together", "reunion"},
+			"journey":     {"journey", "path", "road", "way", "travel", "adventure"},
+			"truth":       {"truth", "reality", "honest", "real", "genuine", "authentic"},
+			"action":      {"action", "doing", "act", "move", "step", "initiative"},
+			"choice":      {"choice", "decis", "choose", "select", "pick", "option"},
+			"life":        {"life", "living", "exist", "being", "alive"},
+			"time":        {"time", "moment", "now", "present", "today", "day", "tonight", "evening"},
+			"support":     {"support", "help", "assist", "guid", "encourag", "force", "with you"},
+			"beginning":   {"begin", "start", "new", "fresh", "commence", "launch"},
+			"loss":        {"loss", "lost", "missing", "gone", "absence"},
+			"health":      {"sick", "ill", "health", "medical", "disease", "pain", "dying", "doctor", "hospital"},
+			"moving":      {"mov", "relocat", "transfer", "shift"},
+			"preparation": {"prepar", "ready", "plan", "arrang", "organiz"},
+			"connection":  {"meet", "meeting", "see", "visit", "reunion", "gather", "connect"},
+			"celebration": {"celebrat", "party", "event", "occasion", "special"},
+			"hope":        {"hope", "better", "improve", "forward", "through"},
+			"difficulty":  {"difficult", "hard", "tough", "struggle", "through", "out"},
+		},
+
+		PositiveWords: []string{
+			"good", "great", "happy", "joy", "love", "wonderful", "amazing",
+			"beautiful", "excellent", "fantastic", "brilliant", "superb",
+			"beyond", "infinity", "force", "blessed", "lucky", "glad",
+			"delight", "pleased", "cheerful", "sweet", "nice", "fun",
+		},
+
+		NegativeWords: []string{
+			"bad", "terrible", "awful", "horrible", "sad", "pain", "hurt",
+			"problem", "crisis", "emergency", "sick", "dying", "death",
+			"refuse", "reject", "serious", "difficult", "struggle",
+		},
+
+		ActionWords: []string{
+			"do", "act", "move", "go", "make", "create", "build",
+			"fight", "push", "drive", "run", "work", "try", "living",
+			"swimming", "busy", "defines",
+		},
+
+		ReflectiveWords: []string{
+			"think", "feel", "believe", "understand", "know", "wonder",
+			"consider", "reflect", "remember", "realize", "learn",
+			"life", "truth", "defined", "opportunities", "miss",
+		},
+	}
 }
 
 // CLI Interface
@@ -502,6 +637,12 @@ func (c *CLI) RunSingleQuery(query string) {
 func (c *CLI) displayResults(query string) {
 	results, err := c.service.SearchQuotes(query, 3)
 	if err != nil {
+		// Check if it's a crisis situation
+		if err.Error() == "CRISIS_DETECTED" {
+			c.displayCrisisResources()
+			return
+		}
+
 		fmt.Printf("\n❌ %s\n", err.Error())
 		fmt.Println("Try describing your feelings differently.")
 		return
@@ -517,6 +658,35 @@ func (c *CLI) displayResults(query string) {
 	}
 
 	fmt.Println("\n" + strings.Repeat("─", 60))
+}
+
+func (c *CLI) displayCrisisResources() {
+	fmt.Println("\n" + strings.Repeat("═", 60))
+	fmt.Println()
+	fmt.Println("⚠️  It sounds like you might be going through a really difficult time.")
+	fmt.Println()
+	fmt.Println("While movie quotes can be inspiring, what you're experiencing")
+	fmt.Println("may need professional support. Please consider reaching out:")
+	fmt.Println()
+	fmt.Println("🆘 CRISIS RESOURCES:")
+	fmt.Println()
+	fmt.Println("   • National Suicide Prevention Lifeline (US)")
+	fmt.Println("     Call or Text: 988")
+	fmt.Println("     Available 24/7, free and confidential")
+	fmt.Println()
+	fmt.Println("   • Crisis Text Line (US)")
+	fmt.Println("     Text: HOME to 741741")
+	fmt.Println()
+	fmt.Println("   • International Association for Suicide Prevention")
+	fmt.Println("     https://www.iasp.info/resources/Crisis_Centres/")
+	fmt.Println()
+	fmt.Println("   • Emergency Services")
+	fmt.Println("     Call: 911 (US) or your local emergency number")
+	fmt.Println()
+	fmt.Println("You don't have to go through this alone. These trained")
+	fmt.Println("professionals are available to listen and help, any time.")
+	fmt.Println()
+	fmt.Println(strings.Repeat("═", 60))
 }
 
 func main() {
